@@ -1,0 +1,366 @@
+=================================================================
+  CIFAR-10  —  Poisoned Training Summary
+  Metric : Clean Test Accuracy (%) at epoch 60
+  Train  : SGD lr=0.1, mom=0.9, wd=5e-4, cosine, 60 ep, batch 128
+  AT     : PGD-7, alpha = eps/5
+=================================================================
+
+-----------------------------------------------------------------
+  Table 1.  ResNet-18 across training regimes (Normal + AT)
+-----------------------------------------------------------------
+
+Method   Budget    Normal    AT eps=2/255   AT eps=4/255   AT eps=6/255   AT eps=8/255
+------   ------    ------    ------------   ------------   ------------   ------------
+DGC      2/255      18.23       29.70          34.78          40.10          50.06
+DGC      4/255      19.11       30.47          37.03          43.90          51.40
+DGC      6/255      17.97       29.61          37.03          43.44          50.08
+DGC      8/255      18.69       27.97          33.31          39.89          47.98
+EMN-SW   8/255      17.70       25.04          59.63          76.60          77.33
+
+
+-----------------------------------------------------------------
+  Table 2.  Normal training across architectures
+-----------------------------------------------------------------
+
+Method   Budget    ResNet-18   ResNet-50   ViT      DenseNet-121   VGG-11
+------   ------    ---------   ---------   ------   ------------   ------
+DGC      2/255       18.23       14.67     17.37       16.17        14.14
+DGC      4/255       19.11       16.27     21.51       18.01        17.41
+DGC      6/255       17.97       16.37     17.84       15.82        18.54
+DGC      8/255       18.69       15.30     18.48       18.35        17.86
+EMN-SW   8/255       17.70       17.32     19.58       21.66        20.95
+
+
+
+=================================================================
+  CIFAR-100  —  Poisoned Training Summary
+  Metric : Clean Test Accuracy (%) at epoch 60
+  Train  : SGD lr=0.1, mom=0.9, wd=5e-4, cosine, 60 ep, batch 128
+  AT     : PGD-7, alpha = eps/5
+=================================================================
+
+-----------------------------------------------------------------
+  Table 3.  ResNet-18 across training regimes (Normal + AT)
+-----------------------------------------------------------------
+
+Method   Budget    Normal    AT eps=2/255   AT eps=4/255   AT eps=6/255   AT eps=8/255
+------   ------    ------    ------------   ------------   ------------   ------------
+DGC      8/255       7.70       11.22          15.54          21.21          27.53
+EMN-SW   8/255       3.08       11.17          41.71          50.35          47.43
+
+
+-----------------------------------------------------------------
+  Table 4.  Normal training across architectures
+-----------------------------------------------------------------
+
+Method   Budget    ResNet-18   ResNet-50   ViT      DenseNet-121   VGG-11
+------   ------    ---------   ---------   ------   ------------   ------
+DGC      8/255       7.70        8.03       8.73        6.32         7.54
+EMN-SW   8/255       3.08        2.82       4.05        3.84         3.68
+
+
+
+=================================================================
+  CLEAN DATA BASELINE  —  clean-eval.py
+  Metric : Clean Test Accuracy (%) at epoch 60
+  Train  : Normal: SGD cosine 60ep | AT: SGD MultiStep 60ep, PGD-7
+=================================================================
+
+-----------------------------------------------------------------
+  Table 5a. CIFAR-10  Clean data — Normal training across architectures
+-----------------------------------------------------------------
+
+ResNet-18   VGG-11    ResNet-50   DenseNet-121   ViT
+---------   ------    ---------   ------------   ------
+  88.32     86.35       89.20        81.87       66.85
+
+
+
+-----------------------------------------------------------------
+  Table 5b. CIFAR-10  Clean data — AT training (ResNet-18 only)
+-----------------------------------------------------------------
+
+Trainer        ResNet-18
+----------     ---------
+AT eps=2/255     85.10
+AT eps=4/255      --
+AT eps=6/255      --
+AT eps=8/255      --
+
+
+
+-----------------------------------------------------------------
+  Table 6a. CIFAR-100  Clean data — Normal training across architectures
+-----------------------------------------------------------------
+
+ResNet-18   VGG-11    ResNet-50   DenseNet-121   ViT
+---------   ------    ---------   ------------   ------
+   --          --         --           --          --
+
+
+-----------------------------------------------------------------
+  Table 6b. CIFAR-100  Clean data — AT training (ResNet-18 only)
+-----------------------------------------------------------------
+
+Trainer        ResNet-18
+----------     ---------
+AT eps=2/255      --
+AT eps=4/255      --
+AT eps=6/255      --
+AT eps=8/255      --
+
+
+
+=================================================================
+  AUGMENTATION ROBUSTNESS  —  aug-robustness.py
+  Metric : Clean Test Accuracy (%) at epoch 60  |  Model : ResNet-18
+  Train  : Normal + aug applied each batch, SGD cosine 60ep
+=================================================================
+
+-----------------------------------------------------------------
+  Table 7.  CIFAR-10  Augmentation robustness (Normal training)
+-----------------------------------------------------------------
+
+Augmentation        Clean       DGC 8/255    EMN-SW 8/255
+------------------  ------      ---------    ------------
+cutout              90.08        16.98            18.98
+mixup               89.44        18.17            20.64
+cutmix              90.85        21.45            25.91
+gaussian            88.04        19.41            17.67
+random_erasing      88.64        18.99            19.43
+cutout+gaussian     88.73        22.42            19.32
+mixup+cutout        90.65        20.24            24.74
+cutmix+gaussian     90.14        21.57            26.10
+
+
+-----------------------------------------------------------------
+  Table 8.  CIFAR-100  Augmentation robustness (Normal training)
+          (ResNet-18, clean test accuracy % at epoch 60)
+-----------------------------------------------------------------
+ 
+Augmentation        Clean       DGC 8/255    EMN-SW 8/255
+------------------  --------    ---------    ------------
+cutout               65.28         8.99          3.13
+mixup                60.96         6.07          3.85
+cutmix               67.57         7.86          4.40
+gaussian             60.29         8.00          3.29
+random_erasing       62.09         9.93          3.39
+cutout+gaussian      61.92         9.88          3.57
+mixup+cutout         63.83         7.34          5.51
+cutmix+gaussian      65.24         7.09          4.68
+
+
+
+=================================================================
+  JPEG COMPRESSION ROBUSTNESS  —  jpeg-robustness.py
+  Metric : Clean Test Accuracy (%) at epoch 60  |  Model : ResNet-18
+  Train  : Normal (no aug), JPEG applied to full dataset before training
+=================================================================
+
+-----------------------------------------------------------------
+  Table 9.  CIFAR-10  JPEG robustness (Normal training)
+-----------------------------------------------------------------
+
+Quality     Clean       DGC 8/255    EMN-SW 8/255
+-------     ------      ---------    ------------
+none (raw)  87.97       20.32        17.31
+10          77.09       61.92        73.19
+20          80.59       38.92        63.90
+30          82.26       29.86        51.69
+40          83.12       25.03        39.32
+50          83.75       23.19        31.52
+60          83.78       21.03        27.39
+70          84.59       19.50        23.60
+80          85.47       19.98        20.82
+90          86.37       19.42        19.11
+
+
+-----------------------------------------------------------------
+  Table 10. CIFAR-100  JPEG robustness (Normal training)
+-----------------------------------------------------------------
+
+Quality     Clean       DGC 8/255    EMN-SW 8/255
+-------     ------      ---------    ------------
+none (raw)  61.89        7.10         2.98
+10          45.87       27.13        42.92
+20          50.29       20.74        41.51
+30          53.14       16.97        35.27
+40          53.63       15.90        26.25
+50          53.72       14.31        23.53
+60          54.43       13.34        16.95
+70          56.51       11.92        11.86
+80          58.48       10.81         7.92
+90          57.91        8.54         4.65
+
+
+=================================================================
+  EXP1 — GRADIENT COSINE SIMILARITY  —  exp1-gradient-cosine.py
+  Metric : cos(g_rel, g_tar) and training loss at final epoch
+  Model  : ResNet-18  |  Dataset : CIFAR-10
+  g_rel  : gradient with correct label on released data
+  g_tar  : gradient with random wrong label on released data
+=================================================================
+
+-----------------------------------------------------------------
+  Table 11. Final-epoch summary (CIFAR-10, ResNet-18)
+-----------------------------------------------------------------
+
+Condition      Final Train Loss   Final cos(g_rel, g_tar)
+-----------    ----------------   -----------------------
+clean               0.0019                -0.96
+DGC 8/255           0.0018                +0.62
+EMN-SW 8/255        0.0011                +0.90
+
+  (See exp1_gradient_cosine.png for full epoch curves)
+
+
+
+=================================================================
+  EXP1-1 — GRADIENT COSINE UNDER AT TRAINING  —  exp1-1-gradient-cosine-AT.py
+  Metric : cos(g_rel, g_tar) on original poisoned probe each epoch
+  Model  : ResNet-18  |  Dataset : CIFAR-10
+  Cosine measured on ORIGINAL poisoned probe (not adversarial examples)
+=================================================================
+
+-----------------------------------------------------------------
+  Table 11b. Final-epoch cosine under AT training
+-----------------------------------------------------------------
+
+Condition      AT-4/255 cos   AT-8/255 cos
+-----------    ------------   ------------
+clean             -0.72           -0.18
+DGC 8/255         -0.94             --
+EMN-SW 8/255      -0.71             --
+
+  Note: all conditions lose gradient alignment under AT-4 (cosine→negative),
+  yet DGC test accuracy (34%) remains far below SW (60%) under AT-4 — see Table 1.
+  (See exp1-1_gradient_cosine_AT.png for full epoch curves)
+
+
+
+=================================================================
+  EXP2 — CLASS-WISE ACCURACY HEATMAP  —  exp2-classwise-heatmap.py
+  Metric : Per-class test accuracy (%)  |  Model : ResNet-18
+  AT     : PGD-7, alpha = eps/5
+=================================================================
+
+-----------------------------------------------------------------
+  Table 12. CIFAR-10  DGC 8/255 — per-class accuracy (%)
+-----------------------------------------------------------------
+
+Class        Normal   AT-2    AT-4    AT-6    AT-8
+----------   ------   -----   -----   -----   -----
+airplane       --      --      --      --      --
+automobile     --      --      --      --      --
+bird           --      --      --      --      --
+cat            --      --      --      --      --
+deer           --      --      --      --      --
+dog            --      --      --      --      --
+frog           --      --      --      --      --
+horse          --      --      --      --      --
+ship           --      --      --      --      --
+truck          --      --      --      --      --
+----------   ------   -----   -----   -----   -----
+mean          19.59   28.77   34.13   39.84   48.34
+
+
+-----------------------------------------------------------------
+  Table 13. CIFAR-10  EMN-SW 8/255 — per-class accuracy (%)
+-----------------------------------------------------------------
+
+Class        Normal   AT-2    AT-4    AT-6    AT-8
+----------   ------   -----   -----   -----   -----
+airplane       --      --      --      --      --
+automobile     --      --      --      --      --
+bird           --      --      --      --      --
+cat            --      --      --      --      --
+deer           --      --      --      --      --
+dog            --      --      --      --      --
+frog           --      --      --      --      --
+horse          --      --      --      --      --
+ship           --      --      --      --      --
+truck          --      --      --      --      --
+----------   ------   -----   -----   -----   -----
+mean          18.03   24.74   57.57   76.81   76.93
+
+
+-----------------------------------------------------------------
+  Table 14. CIFAR-100  per-class summary (min / mean / max %)
+-----------------------------------------------------------------
+
+Noise        Trainer   min     mean    max
+---------    -------   -----   -----   -----
+DGC 8/255    Normal    0.00    7.76   63.00
+DGC 8/255    AT-2      0.00   12.51   53.00
+DGC 8/255    AT-4      0.00   15.75   66.00
+DGC 8/255    AT-6      0.00   21.34   60.00
+DGC 8/255    AT-8      0.00   27.35   69.00
+EMN-SW       Normal    0.00    3.13   48.00
+EMN-SW       AT-2      0.00    7.84   52.00
+EMN-SW       AT-4      2.00   42.77   82.00
+EMN-SW       AT-6     15.00   50.74   87.00
+EMN-SW       AT-8     11.00   48.27   84.00
+
+  (See exp2_CIFAR10_*.png / exp2_CIFAR100_*.png for full heatmaps)
+
+
+
+=================================================================
+  EXP3 — EXTENDED AT BUDGETS (2–64/255)  —  exp3-high-at-budgets.py
+  Metric : Clean Test Accuracy (%)  |  Model : ResNet-18
+  AT     : PGD-7, alpha = eps/5, MultiStep scheduler
+=================================================================
+
+-----------------------------------------------------------------
+  Table 15. CIFAR-10  ResNet-18 — extended AT budgets
+-----------------------------------------------------------------
+
+Method     Normal   AT-2    AT-4    AT-6    AT-8    AT-16   AT-32   AT-64
+------     ------   -----   -----   -----   -----   -----   -----   -----
+DGC         17.39   27.01   33.89   38.96   46.89   65.26   46.24   10.00
+EMN-SW      17.69   25.02   59.00   75.30   77.69   70.42   46.10   10.00
+
+
+-----------------------------------------------------------------
+  Table 16. CIFAR-100  ResNet-18 — extended AT budgets
+-----------------------------------------------------------------
+
+Method     Normal   AT-2    AT-4    AT-6    AT-8    AT-16   AT-32   AT-64
+------     ------   -----   -----   -----   -----   -----   -----   -----
+DGC          7.18   11.75   15.94   21.33   26.99   33.51     --      --
+EMN-SW       3.08   11.17   41.71   50.35   47.43     --      --      --
+
+  (See exp3_*_at_budgets.png for accuracy-vs-budget plots)
+
+
+
+=================================================================
+  EXP4 — SIMCLR SELF-SUPERVISED DEFENSE  —  exp4-simclr.py
+  Protocol : SSL pretrain on poisoned data (200 ep, no labels)
+             → linear probe on clean training labels (100 ep)
+  Model    : ResNet-18 encoder + linear head
+  Metric   : Linear probe test accuracy (%)
+=================================================================
+
+-----------------------------------------------------------------
+  Table 17. CIFAR-10  SimCLR linear probe accuracy
+-----------------------------------------------------------------
+
+Pretrain data          Linear probe acc (%)
+---------------------  --------------------
+clean (upper bound)          --
+DGC 8/255                    --
+EMN-SW 8/255                 --
+
+
+-----------------------------------------------------------------
+  Table 18. CIFAR-100  SimCLR linear probe accuracy
+-----------------------------------------------------------------
+
+Pretrain data          Linear probe acc (%)
+---------------------  --------------------
+clean (upper bound)          --
+DGC 8/255                    --
+EMN-SW 8/255                 --
+
+  (See exp4_simclr_*.png for bar charts)

@@ -1,0 +1,133 @@
+{
+    "parameters": {
+        "method": "DC",
+        "dataset": "FashionMNIST",
+        "model": "ConvNet",
+        "ipc": 100,
+        "eval_mode": "UE",
+        "num_exp": 1,
+        "num_eval": 1,
+        "epoch_eval_train": 250,
+        "Iteration": 6,
+        "lr_img": 0.1,
+        "lr_net": 0.01,
+        "batch_real": 256,
+        "batch_train": 256,
+        "init": "real",
+        "dsa_strategy": "None",
+        "data_path": "../data",
+        "save_path": "result",
+        "dis_metric": "ours",
+        "inner_loop": 5,
+        "outer_loop": 60,
+        "add_noise": false,
+        "noise_type": "None",
+        "noise_path": "/home/mmoslem3/scratch/Unlearnable-Examples-DD/noise-EMN",
+        "test_full_noisy": false,
+        "baseline_epochs": 50,
+        "device": "cuda",
+        "dsa": false
+    },
+    "evaluations": {
+        "5": {
+            "ConvNet": {
+                "mean": 0.8689,
+                "std": 0.0,
+                "raw_accs": [
+                    0.8689
+                ]
+            },
+            "DenseNet121": {
+                "mean": 0.7524,
+                "std": 0.0,
+                "raw_accs": [
+                    0.7524
+                ]
+            },
+            "DenseNet121BN": {
+                "mean": 0.8011,
+                "std": 0.0,
+                "raw_accs": [
+                    0.8011
+                ]
+            },
+            "DenseNetCIFARBN": {
+                "mean": 0.7666,
+                "std": 0.0,
+                "raw_accs": [
+                    0.7666
+                ]
+            },
+            "DenseNetCIFAR": {
+                "mean": 0.6896,
+                "std": 0.0,
+                "raw_accs": [
+                    0.6896
+                ]
+            },
+            "ResNet18": {
+                "mean": 0.803,
+                "std": 0.0,
+                "raw_accs": [
+                    0.803
+                ]
+            },
+            "ResNet18_AP": {
+                "mean": 0.8058,
+                "std": 0.0,
+                "raw_accs": [
+                    0.8058
+                ]
+            },
+            "ResNet18BN": {
+                "mean": 0.8049,
+                "std": 0.0,
+                "raw_accs": [
+                    0.8049
+                ]
+            },
+            "ResNet18BN_AP": {
+                "mean": 0.8189,
+                "std": 0.0,
+                "raw_accs": [
+                    0.8189
+                ]
+            },
+            "ResNet18_mnist": {
+                "mean": 0.8134,
+                "std": 0.0,
+                "raw_accs": [
+                    0.8134
+                ]
+            },
+            "VGG11": {
+                "mean": 0.8446,
+                "std": 0.0,
+                "raw_accs": [
+                    0.8446
+                ]
+            },
+            "VGG11_AP": {
+                "mean": 0.8455,
+                "std": 0.0,
+                "raw_accs": [
+                    0.8455
+                ]
+            },
+            "VGG11BN": {
+                "mean": 0.8386,
+                "std": 0.0,
+                "raw_accs": [
+                    0.8386
+                ]
+            },
+            "VGG11BN_AP": {
+                "mean": 0.8406,
+                "std": 0.0,
+                "raw_accs": [
+                    0.8406
+                ]
+            }
+        }
+    }
+}

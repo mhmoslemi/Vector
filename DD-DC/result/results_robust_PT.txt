@@ -1,0 +1,11 @@
+======================================================================
+  WARPED DATASET (PT) — TRAINING  (Normal | AT | DRO)
+  File : /home/mmoslem3/scratch/Unlearnable-Examples-DD/DD-DC/result/res_FullPoisonDataset_CIFAR10_ConvNet_sub20percent.pt
+  Generated : 2026-04-13  13:36:19
+======================================================================
+
+  Dataset : CIFAR10   Trainer : AT
+  --------------------------------------------------------------------
+  Model                           mean        std
+  --------------------------------------------------------------------
+  ResNet18                      0.2792     0.0000

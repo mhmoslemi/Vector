@@ -1,0 +1,1062 @@
+import time
+import os
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import Dataset
+from torchvision import datasets, transforms
+from scipy.ndimage.interpolation import rotate as scipyrotate
+from networks import MLP, ConvNet, LeNet, AlexNet, AlexNetBN, VGG11, VGG11BN, ResNet,ResNet18,ResNet18BN_AP,ResNet18BN
+from tqdm import trange
+import warnings
+import random
+
+from data_handler.colour_mnist import get_biased_mnist_dataloader
+from data_handler.FashionMNIST import get_biased_fashionmnist_dataloader
+from data_handler import cifar10
+# from data_handler.celeba import CelebA
+# from data_handler.utkface import UTKFaceDataset
+from data_handler.bffhq import BFFHQ
+
+warnings.filterwarnings("ignore", category=UserWarning)
+
+
+def get_dataset(dataset, data_path, skew_ratio = 0.9, severity = 0):
+
+    # 设置用于数据集生成的随机种子
+    dataset_seed = 30
+    random.seed(dataset_seed)
+    np.random.seed(dataset_seed)
+    torch.manual_seed(dataset_seed)
+    torch.cuda.manual_seed(dataset_seed)
+    torch.cuda.manual_seed_all(dataset_seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
+    if dataset == 'CIFAR10':
+        channel = 3
+        im_size = (32, 32)
+        num_classes = 10
+        mean = [0.4914, 0.4822, 0.4465]
+        std = [0.2023, 0.1994, 0.2010]
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=mean, std=std)])
+        dst_train = datasets.CIFAR10(data_path, train=True, download=True, transform=transform) # no augmentation
+        dst_test = datasets.CIFAR10(data_path, train=False, download=True, transform=transform)
+        class_names = dst_train.classes
+
+    if dataset == 'CIFAR100':
+        channel = 3
+        im_size = (32, 32)
+        num_classes = 100
+        mean = [0.5071, 0.4866, 0.4409]
+        std = [0.2673, 0.2564, 0.2762]
+        transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize(mean=mean, std=std)])
+        dst_train = datasets.CIFAR100(data_path, train=True, download=True, transform=transform) # no augmentation
+        dst_test = datasets.CIFAR100(data_path, train=False, download=True, transform=transform)
+        class_names = dst_train.classes
+
+
+    if dataset == "CIFAR10_S_90":
+        channel = 3
+        im_size = (32, 32)
+        num_classes = 10
+        dst_train, dst_test, mean, std = cifar10.CIFAR_10s(data_path, skew_ratio = skew_ratio , severity = severity)
+        class_names = ["ss"]
+
+    elif dataset == 'Colored_MNIST_foreground':
+        channel = 3
+        im_size = (32,32)
+        num_classes = 10
+        class_names = [str(c) for c in range(num_classes)]
+        mean = [0.5, 0.5, 0.5]
+        std = [0.5, 0.5, 0.5]
+
+        batch_size=256
+        dst_train,train_loader = get_biased_mnist_dataloader(data_path, batch_size=batch_size,
+                                                data_label_correlation=0.9,
+                                                is_foreground=True,
+                                                n_confusing_labels=9,
+                                                train=True)
+        dst_test,test_loader = get_biased_mnist_dataloader(data_path, batch_size=batch_size,
+                                                              data_label_correlation=0.1,
+                                                              is_foreground=True,
+                                                              n_confusing_labels=9,
+                                                              train=False)
+
+    elif dataset == 'Colored_FashionMNIST_foreground':
+        channel = 3
+        im_size = (32, 32)
+        num_classes = 10
+        mean = [0.5, 0.5, 0.5]
+        std = [0.5, 0.5, 0.5]
+
+        batch_size=256
+        dst_train,train_loader = get_biased_fashionmnist_dataloader(data_path, batch_size=batch_size,
+                                                data_label_correlation=0.9,
+                                                is_foreground=True,
+                                                n_confusing_labels=9,
+                                                train=True)
+        dst_test,test_loader = get_biased_fashionmnist_dataloader(data_path, batch_size=batch_size,
+                                                              data_label_correlation=0.1,
+                                                              is_foreground=True,
+                                                              n_confusing_labels=9,
+                                                              train=False)
+        class_names = dst_train.classes
+
+    elif dataset == 'Colored_MNIST_background':
+        channel = 3
+        im_size = (32,32)
+        num_classes = 10
+        class_names = [str(c) for c in range(num_classes)]
+        mean = [0.5, 0.5, 0.5]
+        std = [0.5, 0.5, 0.5]
+
+        batch_size=256
+        dst_train,train_loader = get_biased_mnist_dataloader(data_path, batch_size=batch_size,
+                                                data_label_correlation=0.9,
+                                                is_foreground=False,
+                                                n_confusing_labels=9,
+                                                train=True)
+        dst_test,test_loader = get_biased_mnist_dataloader(data_path, batch_size=batch_size,
+                                                              data_label_correlation=0.1,
+                                                              is_foreground=False,
+                                                              n_confusing_labels=9,
+                                                              train=False)
+
+    elif dataset == 'Colored_FashionMNIST_background':
+        channel = 3
+        im_size = (32, 32)
+        num_classes = 10
+        mean = [0.5, 0.5, 0.5]
+        std = [0.5, 0.5, 0.5]
+
+        batch_size=256
+        dst_train,train_loader = get_biased_fashionmnist_dataloader(data_path, batch_size=batch_size,
+                                                data_label_correlation=0.9,
+                                                is_foreground=False,
+                                                n_confusing_labels=9,
+                                                train=True)
+        dst_test,test_loader = get_biased_fashionmnist_dataloader(data_path, batch_size=batch_size,
+                                                              data_label_correlation=0.1,
+                                                              is_foreground=False,
+                                                              n_confusing_labels=9,
+                                                              train=False)
+        class_names = dst_train.classes
+
+    elif dataset == 'UTKface':
+        channel = 3
+        im_size = (64, 64)
+        num_classes = 3
+        dst_train, dst_test, mean, std = UTKFaceDataset()
+        class_names = ["0-19", "20-40", "40-"]
+
+    elif dataset == 'CelebA':
+
+
+
+        channel = 3
+        im_size = (64, 64)
+        num_classes = 2
+        target_label_idx, sensitive_label_idx = 2, 20
+        # dst_train, dst_test, mean, std = CelebA(target_label_idx, sensitive_label_idx)
+        dst_train, dst_test, mean, std = CelebA(
+            target_label_idx, 
+            sensitive_label_idx, 
+            data_dir='/home/mmoslem3/scratch/FairDD/data/celeba' # <--- Add this if you need to override the default path
+        )
+        class_names = ['attractive', 'no_attractive']
+
+    elif dataset == 'BFFHQ':
+        channel = 3
+        im_size = (64, 64)
+        num_classes = 2
+        print(data_path+"/bffhq")
+        # dst_train, dst_test, mean, std = BFFHQ(data_path+"/bffhq")
+        dst_train, dst_test, mean, std = BFFHQ()
+        class_names = [str(c) for c in range(num_classes)]
+
+    else:
+        exit('unknown dataset: %s'%dataset)
+
+
+    testloader = torch.utils.data.DataLoader(dst_test, batch_size=256, shuffle=False, num_workers=0)
+    return channel, im_size, num_classes, class_names, mean, std, dst_train, dst_test, testloader
+
+
+
+class TensorDataset(Dataset):
+    def __init__(self, images, labels): # images: n x c x h x w tensor
+        self.images = images.detach().float()
+        self.labels = labels.detach()
+
+    def __getitem__(self, index):
+        return self.images[index], self.labels[index]
+
+    def __len__(self):
+        return self.images.shape[0]
+
+
+
+def get_default_convnet_setting():
+    net_width, net_depth, net_act, net_norm, net_pooling = 128, 3, 'relu', 'instancenorm', 'avgpooling'
+    return net_width, net_depth, net_act, net_norm, net_pooling
+
+
+
+def get_network(model, channel, num_classes, im_size=(32, 32)):
+    torch.random.manual_seed(int(time.time() * 1000) % 100000)
+    net_width, net_depth, net_act, net_norm, net_pooling = get_default_convnet_setting()
+
+    if model == 'MLP':
+        net = MLP(channel=channel, num_classes=num_classes)
+    elif model == 'ConvNet':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act=net_act, net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+    elif model == 'LeNet':
+        net = LeNet(channel=channel, num_classes=num_classes)
+    elif model == 'AlexNet':
+        net = AlexNet(channel=channel, num_classes=num_classes)
+    elif model == 'AlexNetBN':
+        net = AlexNetBN(channel=channel, num_classes=num_classes)
+    elif model == 'VGG11':
+        net = VGG11( channel=channel, num_classes=num_classes)
+    elif model == 'VGG11BN':
+        net = VGG11BN(channel=channel, num_classes=num_classes)
+    elif model == 'ResNet18':
+        net = ResNet18(channel=channel, num_classes=num_classes)
+    elif model == 'ResNet18BN_AP':
+        net = ResNet18BN_AP(channel=channel, num_classes=num_classes)
+    elif model == 'ResNet18BN':
+        net = ResNet18BN(channel=channel, num_classes=num_classes)
+
+    elif model == 'ConvNetD1':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=1, net_act=net_act, net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetD2':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=2, net_act=net_act, net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetD3':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=3, net_act=net_act, net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetD4':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=4, net_act=net_act, net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+
+    elif model == 'ConvNetW32':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=32, net_depth=net_depth, net_act=net_act, net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetW64':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=64, net_depth=net_depth, net_act=net_act, net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetW128':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=128, net_depth=net_depth, net_act=net_act, net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetW256':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=256, net_depth=net_depth, net_act=net_act, net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+
+    elif model == 'ConvNetAS':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act='sigmoid', net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetAR':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act='relu', net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetAL':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act='leakyrelu', net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetASwish':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act='swish', net_norm=net_norm, net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetASwishBN':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act='swish', net_norm='batchnorm', net_pooling=net_pooling, im_size=im_size)
+
+    elif model == 'ConvNetNN':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act=net_act, net_norm='none', net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetBN':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act=net_act, net_norm='batchnorm', net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetLN':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act=net_act, net_norm='layernorm', net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetIN':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act=net_act, net_norm='instancenorm', net_pooling=net_pooling, im_size=im_size)
+    elif model == 'ConvNetGN':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act=net_act, net_norm='groupnorm', net_pooling=net_pooling, im_size=im_size)
+
+    elif model == 'ConvNetNP':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act=net_act, net_norm=net_norm, net_pooling='none', im_size=im_size)
+    elif model == 'ConvNetMP':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act=net_act, net_norm=net_norm, net_pooling='maxpooling', im_size=im_size)
+    elif model == 'ConvNetAP':
+        net = ConvNet(channel=channel, num_classes=num_classes, net_width=net_width, net_depth=net_depth, net_act=net_act, net_norm=net_norm, net_pooling='avgpooling', im_size=im_size)
+
+    else:
+        net = None
+        exit('unknown model: %s'%model)
+
+    gpu_num = torch.cuda.device_count()
+    if gpu_num>0:
+        device = 'cuda'
+        if gpu_num>1:
+            net = nn.DataParallel(net)
+    else:
+        device = 'cpu'
+    net = net.to(device)
+
+    return net
+
+
+
+def get_time():
+    return str(time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()))
+
+# def dist_idc(x, y):
+#     return (x - y).abs().sum()
+
+
+def dist_idc(x, y, method='l1'):
+    """Distance objectives
+    """
+    if method == 'mse':
+        dist_ = (x - y).pow(2).sum()
+    elif method == 'l1':
+        dist_ = (x - y).abs().sum()
+    elif method == 'l1_mean':
+        n_b = x.shape[0]
+        dist_ = (x - y).abs().reshape(n_b, -1).mean(-1).sum()
+    elif method == 'cos':
+        x = x.reshape(x.shape[0], -1)
+        y = y.reshape(y.shape[0], -1)
+        dist_ = torch.sum(1 - torch.sum(x * y, dim=-1) /
+                          (torch.norm(x, dim=-1) * torch.norm(y, dim=-1) + 1e-6))
+
+    return dist_
+
+
+def matchloss_idc(g_syn, g_real,args):
+
+    """Matching losses (feature or gradient)
+    """
+    loss = None
+
+    # if args.match == 'feat':
+    #     with torch.no_grad():
+    #         feat_tg = model.get_feature(img_real, args.idx_from, args.idx_to)
+    #     feat = model.get_feature(img_syn, args.idx_from, args.idx_to)
+
+    #     for i in range(len(feat)):
+    #         loss = add_loss(loss, dist(feat_tg[i].mean(0), feat[i].mean(0), method=args.metric))
+
+    # elif args.match == 'grad':
+    # criterion = nn.CrossEntropyLoss()
+
+    # output_real = model(img_real)
+    # loss_real = criterion(output_real, lab_real)
+    # g_real = torch.autograd.grad(loss_real, model.parameters())
+    # g_real = list((g.detach() for g in g_real))
+
+    # output_syn = model(img_syn)
+    # loss_syn = criterion(output_syn, lab_syn)
+    # g_syn = torch.autograd.grad(loss_syn, model.parameters(), create_graph=True)
+
+    dis = torch.tensor(0.0).to(args.device)
+    for i in range(len(g_real)):
+        # if (len(g_real[i].shape) == 1) and not args.bias:  # bias, normliazation
+        #     continue
+        # if (len(g_real[i].shape) == 2) and not args.fc:
+        #     continue
+
+        # dis +=  dist_idc(g_real[i], g_syn[i], 'l1')
+        dis +=  dist_idc(g_real[i], g_syn[i], 'l1')
+
+    return dis
+
+
+     
+
+
+def distance_wb(gwr, gws):
+    shape = gwr.shape
+    if len(shape) == 4: # conv, out*in*h*w
+        gwr = gwr.reshape(shape[0], shape[1] * shape[2] * shape[3])
+        gws = gws.reshape(shape[0], shape[1] * shape[2] * shape[3])
+    elif len(shape) == 3:  # layernorm, C*h*w
+        gwr = gwr.reshape(shape[0], shape[1] * shape[2])
+        gws = gws.reshape(shape[0], shape[1] * shape[2])
+    elif len(shape) == 2: # linear, out*in
+        tmp = 'do nothing'
+    elif len(shape) == 1: # batchnorm/instancenorm, C; groupnorm x, bias
+        gwr = gwr.reshape(1, shape[0])
+        gws = gws.reshape(1, shape[0])
+        return torch.tensor(0, dtype=torch.float, device=gwr.device)
+
+    dis_weight = torch.sum(1 - torch.sum(gwr * gws, dim=-1) / (torch.norm(gwr, dim=-1) * torch.norm(gws, dim=-1) + 0.000001))
+    dis = dis_weight
+    return dis
+
+
+
+def match_loss(gw_syn, gw_real, args):
+    dis = torch.tensor(0.0).to(args.device)
+
+    if args.dis_metric == 'ours':
+        for ig in range(len(gw_real)):
+            gwr = gw_real[ig]
+            gws = gw_syn[ig]
+            dis += distance_wb(gwr, gws)
+
+    elif args.dis_metric == 'mse':
+        gw_real_vec = []
+        gw_syn_vec = []
+        for ig in range(len(gw_real)):
+            gw_real_vec.append(gw_real[ig].reshape((-1)))
+            gw_syn_vec.append(gw_syn[ig].reshape((-1)))
+        gw_real_vec = torch.cat(gw_real_vec, dim=0)
+        gw_syn_vec = torch.cat(gw_syn_vec, dim=0)
+        dis = torch.sum((gw_syn_vec - gw_real_vec)**2)
+
+    elif args.dis_metric == 'cos':
+        gw_real_vec = []
+        gw_syn_vec = []
+        for ig in range(len(gw_real)):
+            gw_real_vec.append(gw_real[ig].reshape((-1)))
+            gw_syn_vec.append(gw_syn[ig].reshape((-1)))
+        gw_real_vec = torch.cat(gw_real_vec, dim=0)
+        gw_syn_vec = torch.cat(gw_syn_vec, dim=0)
+        dis = 1 - torch.sum(gw_real_vec * gw_syn_vec, dim=-1) / (torch.norm(gw_real_vec, dim=-1) * torch.norm(gw_syn_vec, dim=-1) + 0.000001)
+
+    else:
+        exit('unknown distance function: %s'%args.dis_metric)
+
+    return dis
+
+
+
+def get_loops(ipc):
+    # Get the two hyper-parameters of outer-loop and inner-loop.
+    # The following values are empirically good.
+    if ipc < 10:
+        outer_loop, inner_loop = 5, 10
+    elif ipc == 10:
+        outer_loop, inner_loop = 10, 50
+    elif ipc == 20:
+        outer_loop, inner_loop = 20, 25
+    elif ipc == 30:
+        outer_loop, inner_loop = 30, 20
+    elif ipc == 40:
+        outer_loop, inner_loop = 40, 15
+    elif ipc == 50:
+        outer_loop, inner_loop = 50, 10
+    elif ipc > 50:
+        outer_loop, inner_loop = 100, 10
+    else:
+        outer_loop, inner_loop = 0, 0
+        exit('loop hyper-parameters are not defined for %d ipc'%ipc)
+    return outer_loop, inner_loop
+
+
+def _sanitize_grads(grads, net_parameters):
+    out = []
+    for g, p in zip(grads, net_parameters):
+        out.append(torch.zeros_like(p) if g is None else g)
+    return out
+
+def grad_sub(g1, g2):
+    return [a - b for a, b in zip(g1, g2)]
+
+def grad_dot(g1, g2):
+    s = None
+    for a, b in zip(g1, g2):
+        v = (a * b).sum()
+        s = v if s is None else (s + v)
+    return s
+
+def proj_norm2_onto_span(g, basis, eps=1e-6):
+    """
+    Returns ||P_span(basis) g||^2 where:
+      - g is list[tensor] and may require grad
+      - basis is list[list[tensor]] and should be detached (constants)
+    """
+    m = len(basis)
+    if m == 0:
+        return g[0].new_tensor(0.0)
+
+    # Gram matrix of basis: G_ij = <b_i, b_j>  (constants)
+    G = g[0].new_zeros((m, m))
+    for i in range(m):
+        for j in range(m):
+            G[i, j] = grad_dot(basis[i], basis[j])
+
+    # v_i = <b_i, g> (depends on g)
+    v = g[0].new_zeros((m,))
+    for i in range(m):
+        v[i] = grad_dot(basis[i], g)
+
+    # Solve (G + eps I) alpha = v
+    G = G + eps * torch.eye(m, device=G.device, dtype=G.dtype)
+    alpha = torch.linalg.solve(G, v)
+
+    # ||P g||^2 = v^T alpha
+    return (v * alpha).sum()
+
+def orthogonality_loss_from_group_grads(gw_syn, group_grads, eps=1e-6):
+    """
+    gw_syn: list[tensor], from autograd.grad(..., create_graph=True)
+    group_grads: list[list[tensor]], each detached
+    """
+    if len(group_grads) < 2:
+        return gw_syn[0].new_tensor(0.0)
+
+    g_ref = group_grads[0]
+    basis = [grad_sub(g_a, g_ref) for g_a in group_grads[1:]]  # (g_a - g_ref)
+    return proj_norm2_onto_span(gw_syn, basis, eps=eps)
+
+
+
+
+def epoch2(mode, dataloader, net, optimizer, criterion, args, aug):
+    loss_avg, acc_avg, num_exp = 0, 0, 0
+    net = net.to(args.device)
+    criterion = criterion.to(args.device)
+
+    if mode == 'train':
+        net.train()
+    else:
+        net.eval()
+
+    for i_batch, datum in enumerate(dataloader):
+        img = datum[0].float().to(args.device)
+        if aug:
+            if args.dsa:
+                img = DiffAugment(img, args.dsa_strategy, param=args.dsa_param)
+            else:
+                img = augment(img, args.dc_aug_param, device=args.device)
+        lab = datum[1].long().to(args.device)
+        n_b = lab.shape[0]
+
+        output = net(img)
+        loss = criterion(output, lab)
+        acc = np.sum(np.equal(np.argmax(output.cpu().data.numpy(), axis=-1), lab.cpu().data.numpy()))
+
+        loss_avg += loss.item()*n_b
+        acc_avg += acc
+        num_exp += n_b
+
+        if mode == 'train':
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+    loss_avg /= num_exp
+    acc_avg /= num_exp
+
+    return loss_avg, acc_avg, net
+
+
+
+
+def epoch(mode, dataloader, net, optimizer, criterion, args, aug):
+    loss_avg, acc_avg, num_exp = 0, 0, 0
+    net = net.to(args.device)
+    criterion = criterion.to(args.device)
+
+    if mode == 'train':
+        net.train()
+    else:
+        net.eval()
+
+    for i_batch, datum in enumerate(dataloader):
+        img = datum[0].float().to(args.device)
+        if aug:
+            if args.dsa:
+                img = DiffAugment(img, args.dsa_strategy, param=args.dsa_param)
+            else:
+                img = augment(img, args.dc_aug_param, device=args.device)
+        lab = datum[1].long().to(args.device)
+        n_b = lab.shape[0]
+
+        # print(img.shape)
+        output = net(img)
+        loss = criterion(output, lab)
+        acc = np.sum(np.equal(np.argmax(output.cpu().data.numpy(), axis=-1), lab.cpu().data.numpy()))
+
+        loss_avg += loss.item()*n_b
+        acc_avg += acc
+        num_exp += n_b
+
+        if mode == 'train':
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+    loss_avg /= num_exp
+    acc_avg /= num_exp
+
+    return loss_avg, acc_avg
+
+
+
+
+def epoch_Fairness_Metric_suff(mode, dataloader, net, criterion, args, aug):
+    loss_avg, acc_avg, num_exp = 0, 0, 0
+    net = net.to(args.device)
+    criterion = criterion.to(args.device)
+    pre = []
+    true = []
+
+    eval_pred_count = torch.zeros(args.num_groups, args.num_classes).cuda()
+    eval_true_count = torch.zeros(args.num_groups, args.num_classes).cuda()
+
+    if mode == 'train':
+        net.train()
+    else:
+        net.eval()
+
+    for i_batch, datum in enumerate(dataloader):
+        img = datum[0].float().to(args.device)
+        if aug:
+            if args.dsa:
+                img = DiffAugment(img, args.dsa_strategy, param=args.dsa_param)
+            else:
+                img = augment(img, args.dc_aug_param, device=args.device)
+        
+        lab = datum[1].long().to(args.device)
+        n_b = lab.shape[0]
+
+        output = net(img)
+        loss = criterion(output, lab)
+        acc_np = np.sum(np.equal(np.argmax(output.cpu().data.numpy(), axis=-1), lab.cpu().data.numpy()))
+        
+        loss_avg += loss.item() * n_b
+        acc_avg += acc_np
+        num_exp += n_b
+        
+        # Get sensitive attribute (color/group)
+        a = datum[2].long().to(args.device)
+
+        preds = torch.argmax(output, 1)
+        acc = (preds == lab).float().squeeze()
+        
+        for g in range(args.num_groups):
+            for l in range(args.num_classes):
+                # 1. Denominator: How many times did we PREDICT class 'l' for group 'g'?
+                eval_pred_count[g, l] += torch.sum((a == g) * (preds == l))
+                
+                # 2. Numerator: How many times were we CORRECT when predicting class 'l' for group 'g'?
+                tmp = (lab == l).float().squeeze()
+                eval_true_count[g, l] += tmp[(a == g) * (preds == l)].sum()
+                # eval_true_count[g, l] += acc[(a == g) * (preds == l)].sum()
+
+    # Add epsilon to denominator to avoid division by zero
+    # We add it to eval_pred_count because Sufficiency = P(y|y^) = Correct / Predicted
+    eval_pred_count = eval_pred_count + 1e-8
+    
+    # Calculate Precision per Group per Class
+    # Shape: [num_groups, num_classes]
+    eval_precision = eval_true_count / eval_pred_count
+    
+    # Calculate the Gap (Max - Min) across groups for each class
+    # Shape: [num_classes]
+    suff_gap_per_class = torch.max(eval_precision, dim=0)[0] - torch.min(eval_precision, dim=0)[0]
+    
+    # Get Max and Mean gaps across the classes
+    max_Sufficiency = torch.max(suff_gap_per_class).item()
+    mean_Sufficiency = torch.mean(suff_gap_per_class).item()
+
+    loss_avg /= num_exp
+    acc_avg /= num_exp
+    
+    return loss_avg, acc_avg, max_Sufficiency, mean_Sufficiency
+
+
+
+
+def epoch_Fairness_Metric(mode, dataloader, net, criterion, args, aug):
+    loss_avg, acc_avg, num_exp = 0, 0, 0
+    net = net.to(args.device)
+    criterion = criterion.to(args.device)
+    pre = []
+    true = []
+
+    eval_pred_count = torch.zeros(args.num_groups, args.num_classes).cuda()
+    eval_true_count = torch.zeros(args.num_groups, args.num_classes).cuda()
+    eval_data_count = torch.zeros(args.num_groups, args.num_classes).cuda()
+
+    if mode == 'train':
+        net.train()
+    else:
+        net.eval()
+
+    for i_batch, datum in enumerate(dataloader):
+        img = datum[0].float().to(args.device)
+        if aug:
+            if args.dsa:
+                img = DiffAugment(img, args.dsa_strategy, param=args.dsa_param)
+            else:
+                img = augment(img, args.dc_aug_param, device=args.device)
+        lab = datum[1].long().to(args.device)
+        n_b = lab.shape[0]
+
+        output = net(img)
+        loss = criterion(output, lab)
+        acc = np.sum(np.equal(np.argmax(output.cpu().data.numpy(), axis=-1), lab.cpu().data.numpy()))
+        pre.append(output.cpu().data)
+        true.append(lab.cpu().data)
+
+        loss_avg += loss.item()*n_b
+        acc_avg += acc
+        num_exp += n_b
+        a = datum[2].long().to(args.device)
+
+        preds = torch.argmax(output, 1)
+        acc = (preds == lab).float().squeeze()
+        for g in range(args.num_groups):
+            for l in range(args.num_classes):
+                eval_pred_count[g, l] += torch.sum((a == g) * (preds == l))
+                eval_true_count[g, l] += acc[(a == g) * (lab == l)].sum()
+                eval_data_count[g, l] += torch.sum((a == g) * (lab == l))
+        
+        for g in range(args.num_groups):
+            for l in range(args.num_classes):
+                eval_data_count[g, l] += 1e-8
+
+    eval_true_count = eval_true_count / eval_data_count
+    eval_max_eopp1 = torch.max(eval_true_count, dim=0)[0] - torch.min(eval_true_count, dim=0)[0]
+  
+    max_Equalized_Odds = torch.max(eval_max_eopp1).item()
+    mean_Equalized_Odds = torch.mean(eval_max_eopp1).item()
+
+    loss_avg /= num_exp
+    acc_avg /= num_exp
+    return loss_avg, acc_avg, max_Equalized_Odds,mean_Equalized_Odds
+
+
+def evaluate_synset(it_eval, net, images_train, labels_train, testloader, args, verbose=True):
+    net = net.to(args.device)
+    images_train = images_train.to(args.device)
+    labels_train = labels_train.to(args.device)
+    lr = float(args.lr_net)
+    Epoch = int(args.epoch_eval_train)
+    lr_schedule = [Epoch//2+1]
+    optimizer = torch.optim.SGD(net.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
+    criterion = nn.CrossEntropyLoss().to(args.device)
+
+    dst_train = TensorDataset(images_train, labels_train)
+    trainloader = torch.utils.data.DataLoader(dst_train, batch_size=args.batch_train, shuffle=True, num_workers=0)
+
+    start = time.time()
+    for ep in range(Epoch+1):
+        loss_train, acc_train = epoch('train', trainloader, net, optimizer, criterion, args, aug = True)
+        if ep in lr_schedule:
+            lr *= 0.1
+            optimizer = torch.optim.SGD(net.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
+
+    time_train = time.time() - start
+    loss_test, acc_test, max_Equalized_Odds,mean_Equalized_Odds = epoch_Fairness_Metric('test', testloader, net, criterion, args, aug = False)
+    _, _, max_Sufficiency ,mean_Sufficiency = epoch_Fairness_Metric_suff('test', testloader, net, criterion, args, aug = False)
+    
+    acc_test, max_Equalized_Odds, mean_Equalized_Odds = round(acc_test * 100, 2), round(max_Equalized_Odds * 100, 2), round(mean_Equalized_Odds * 100, 2)
+    max_Sufficiency, mean_Sufficiency = round(max_Sufficiency * 100, 2), round(mean_Sufficiency * 100, 2)
+    
+    if verbose:
+        print('%s Evaluate_%02d: epoch = %04d train time = %d s train loss = %.6f train acc = %.2f, test acc = %.2f, max_Equalized_Odds = %.2f, mean_Equalized_Odds = %.2f' % (get_time(), it_eval, Epoch, int(time_train), loss_train, acc_train, acc_test, max_Equalized_Odds, mean_Equalized_Odds))
+        # print('max_Sufficiency = %.2f, mean_Sufficiency = %.2f' % (max_Sufficiency, mean_Sufficiency))
+
+    return net, acc_train, acc_test, max_Equalized_Odds,mean_Equalized_Odds, max_Sufficiency, mean_Sufficiency
+
+
+def augment(images, dc_aug_param, device):
+    # This can be sped up in the future.
+
+    if dc_aug_param != None and dc_aug_param['strategy'] != 'none':
+        scale = dc_aug_param['scale']
+        crop = dc_aug_param['crop']
+        rotate = dc_aug_param['rotate']
+        noise = dc_aug_param['noise']
+        strategy = dc_aug_param['strategy']
+
+        shape = images.shape
+        mean = []
+        for c in range(shape[1]):
+            mean.append(float(torch.mean(images[:,c])))
+
+        def cropfun(i):
+            im_ = torch.zeros(shape[1],shape[2]+crop*2,shape[3]+crop*2, dtype=torch.float, device=device)
+            for c in range(shape[1]):
+                im_[c] = mean[c]
+            im_[:, crop:crop+shape[2], crop:crop+shape[3]] = images[i]
+            r, c = np.random.permutation(crop*2)[0], np.random.permutation(crop*2)[0]
+            images[i] = im_[:, r:r+shape[2], c:c+shape[3]]
+
+        def scalefun(i):
+            h = int((np.random.uniform(1 - scale, 1 + scale)) * shape[2])
+            w = int((np.random.uniform(1 - scale, 1 + scale)) * shape[2])
+            tmp = F.interpolate(images[i:i + 1], [h, w], )[0]
+            mhw = max(h, w, shape[2], shape[3])
+            im_ = torch.zeros(shape[1], mhw, mhw, dtype=torch.float, device=device)
+            r = int((mhw - h) / 2)
+            c = int((mhw - w) / 2)
+            im_[:, r:r + h, c:c + w] = tmp
+            r = int((mhw - shape[2]) / 2)
+            c = int((mhw - shape[3]) / 2)
+            images[i] = im_[:, r:r + shape[2], c:c + shape[3]]
+
+        def rotatefun(i):
+            im_ = scipyrotate(images[i].cpu().data.numpy(), angle=np.random.randint(-rotate, rotate), axes=(-2, -1), cval=np.mean(mean))
+            r = int((im_.shape[-2] - shape[-2]) / 2)
+            c = int((im_.shape[-1] - shape[-1]) / 2)
+            images[i] = torch.tensor(im_[:, r:r + shape[-2], c:c + shape[-1]], dtype=torch.float, device=device)
+
+        def noisefun(i):
+            images[i] = images[i] + noise * torch.randn(shape[1:], dtype=torch.float, device=device)
+
+
+        augs = strategy.split('_')
+
+        for i in range(shape[0]):
+            choice = np.random.permutation(augs)[0] # randomly implement one augmentation
+            if choice == 'crop':
+                cropfun(i)
+            elif choice == 'scale':
+                scalefun(i)
+            elif choice == 'rotate':
+                rotatefun(i)
+            elif choice == 'noise':
+                noisefun(i)
+
+    return images
+
+
+
+def get_daparam(dataset, model, model_eval, ipc):
+    # We find that augmentation doesn't always benefit the performance.
+    # So we do augmentation for some of the settings.
+
+    dc_aug_param = dict()
+    dc_aug_param['crop'] = 4
+    dc_aug_param['scale'] = 0.2
+    dc_aug_param['rotate'] = 45
+    dc_aug_param['noise'] = 0.001
+    dc_aug_param['strategy'] = 'none'
+
+    if dataset == 'MNIST':
+        dc_aug_param['strategy'] = 'crop_scale_rotate'
+
+    if model_eval in ['ConvNetBN']: # Data augmentation makes model training with Batch Norm layer easier.
+        dc_aug_param['strategy'] = 'crop_noise'
+
+    return dc_aug_param
+
+
+def get_eval_pool(eval_mode, model, model_eval):
+    if eval_mode == 'M': # multiple architectures
+        # model_eval_pool = ['MLP', 'ConvNet', 'LeNet', 'AlexNet', 'VGG11', 'ResNet18']
+        model_eval_pool = ['VGG11','AlexNet', 'ResNet18', 'ConvNet', ]
+        # model_eval_pool = ['VGG11' ,'ResNet18']
+    elif eval_mode == 'B':  # multiple architectures with BatchNorm for DM experiments
+        model_eval_pool = ['ConvNetBN', 'ConvNetASwishBN', 'AlexNetBN', 'VGG11BN', 'ResNet18BN']
+    elif eval_mode == 'W': # ablation study on network width
+        model_eval_pool = ['ConvNetW32', 'ConvNetW64', 'ConvNetW128', 'ConvNetW256']
+    elif eval_mode == 'D': # ablation study on network depth
+        model_eval_pool = ['ConvNetD1', 'ConvNetD2', 'ConvNetD3', 'ConvNetD4']
+    elif eval_mode == 'A': # ablation study on network activation function
+        model_eval_pool = ['ConvNetAS', 'ConvNetAR', 'ConvNetAL', 'ConvNetASwish']
+    elif eval_mode == 'P': # ablation study on network pooling layer
+        model_eval_pool = ['ConvNetNP', 'ConvNetMP', 'ConvNetAP']
+    elif eval_mode == 'N': # ablation study on network normalization layer
+        model_eval_pool = ['ConvNetNN', 'ConvNetBN', 'ConvNetLN', 'ConvNetIN', 'ConvNetGN']
+    elif eval_mode == 'S': # itself
+        if 'BN' in model:
+            print('Attention: Here I will replace BN with IN in evaluation, as the synthetic set is too small to measure BN hyper-parameters.')
+        model_eval_pool = [model[:model.index('BN')]] if 'BN' in model else [model]
+    elif eval_mode == 'SS':  # itself
+        model_eval_pool = [model]
+    else:
+        model_eval_pool = [model_eval]
+    return model_eval_pool
+
+
+class ParamDiffAug():
+    def __init__(self):
+        self.aug_mode = 'S' #'multiple or single'
+        self.prob_flip = 0.5
+        self.ratio_scale = 1.2
+        self.ratio_rotate = 15.0
+        self.ratio_crop_pad = 0.125
+        self.ratio_cutout = 0.5 # the size would be 0.5x0.5
+        self.brightness = 1.0
+        self.saturation = 2.0
+        self.contrast = 0.5
+
+
+def set_seed_DiffAug(param):
+    if param.latestseed == -1:
+        return
+    else:
+        torch.random.manual_seed(param.latestseed)
+        param.latestseed += 1
+
+
+def DiffAugment(x, strategy='', seed = -1, param = None):
+    if strategy == 'None' or strategy == 'none' or strategy == '':
+        return x
+
+    if seed == -1:
+        param.Siamese = False
+    else:
+        param.Siamese = True
+
+    param.latestseed = seed
+
+    if strategy:
+        if param.aug_mode == 'M': # original
+            for p in strategy.split('_'):
+                for f in AUGMENT_FNS[p]:
+                    x = f(x, param)
+        elif param.aug_mode == 'S':
+            pbties = strategy.split('_')
+            set_seed_DiffAug(param)
+            p = pbties[torch.randint(0, len(pbties), size=(1,)).item()]
+            for f in AUGMENT_FNS[p]:
+                x = f(x, param)
+        else:
+            exit('unknown augmentation mode: %s'%param.aug_mode)
+        x = x.contiguous()
+    return x
+
+
+# We implement the following differentiable augmentation strategies based on the code provided in https://github.com/mit-han-lab/data-efficient-gans.
+def rand_scale(x, param):
+    # x>1, max scale
+    # sx, sy: (0, +oo), 1: orignial size, 0.5: enlarge 2 times
+    ratio = param.ratio_scale
+    set_seed_DiffAug(param)
+    sx = torch.rand(x.shape[0]) * (ratio - 1.0/ratio) + 1.0/ratio
+    set_seed_DiffAug(param)
+    sy = torch.rand(x.shape[0]) * (ratio - 1.0/ratio) + 1.0/ratio
+    theta = [[[sx[i], 0,  0],
+            [0,  sy[i], 0],] for i in range(x.shape[0])]
+    theta = torch.tensor(theta, dtype=torch.float)
+    if param.Siamese: # Siamese augmentation:
+        theta_clone=theta.clone()
+        theta[:] = theta_clone[0]
+        # theta[:] = theta[0]
+    grid = F.affine_grid(theta, x.shape).to(x.device)
+    x = F.grid_sample(x, grid)
+    return x
+
+
+def rand_rotate(x, param): # [-180, 180], 90: anticlockwise 90 degree
+    ratio = param.ratio_rotate
+    set_seed_DiffAug(param)
+    theta = (torch.rand(x.shape[0]) - 0.5) * 2 * ratio / 180 * float(np.pi)
+    theta = [[[torch.cos(theta[i]), torch.sin(-theta[i]), 0],
+        [torch.sin(theta[i]), torch.cos(theta[i]),  0],]  for i in range(x.shape[0])]
+    theta = torch.tensor(theta, dtype=torch.float)
+    if param.Siamese: # Siamese augmentation:
+        theta_clone=theta.clone()
+        theta[:] = theta_clone[0]
+        # theta[:] = theta[0]
+    grid = F.affine_grid(theta, x.shape).to(x.device)
+    x = F.grid_sample(x, grid)
+    return x
+
+
+def rand_flip(x, param):
+    prob = param.prob_flip
+    set_seed_DiffAug(param)
+    randf = torch.rand(x.size(0), 1, 1, 1, device=x.device)
+    if param.Siamese: # Siamese augmentation:
+        randf_clone=randf.clone()
+        randf[:] = randf_clone[0]
+        # randf[:] = randf[0]
+    return torch.where(randf < prob, x.flip(3), x)
+
+
+def rand_brightness(x, param):
+    ratio = param.brightness
+    set_seed_DiffAug(param)
+    randb = torch.rand(x.size(0), 1, 1, 1, dtype=x.dtype, device=x.device)
+    if param.Siamese:  # Siamese augmentation:
+        randb_clone=randb.clone()
+        randb[:] = randb_clone[0]
+        # randb[:] = randb[0]
+    x = x + (randb - 0.5)*ratio
+    return x
+
+
+def rand_saturation(x, param):
+    ratio = param.saturation
+    x_mean = x.mean(dim=1, keepdim=True)
+    set_seed_DiffAug(param)
+    rands = torch.rand(x.size(0), 1, 1, 1, dtype=x.dtype, device=x.device)
+    if param.Siamese:  # Siamese augmentation:
+        rands_clone=rands.clone()
+        rands[:] = rands_clone[0]
+        # rands[:] = rands[0]
+    x = (x - x_mean) * (rands * ratio) + x_mean
+    return x
+
+
+def rand_contrast(x, param):
+    ratio = param.contrast
+    x_mean = x.mean(dim=[1, 2, 3], keepdim=True)
+    set_seed_DiffAug(param)
+    randc = torch.rand(x.size(0), 1, 1, 1, dtype=x.dtype, device=x.device)
+    if param.Siamese:  # Siamese augmentation:
+        randc_clone=randc.clone()
+        randc[:] = randc_clone[0]
+        # randc[:] = randc[0]
+    x = (x - x_mean) * (randc + ratio) + x_mean
+    return x
+
+
+def rand_crop(x, param):
+    # The image is padded on its surrounding and then cropped.
+    ratio = param.ratio_crop_pad
+    shift_x, shift_y = int(x.size(2) * ratio + 0.5), int(x.size(3) * ratio + 0.5)
+    set_seed_DiffAug(param)
+    translation_x = torch.randint(-shift_x, shift_x + 1, size=[x.size(0), 1, 1], device=x.device)
+    set_seed_DiffAug(param)
+    translation_y = torch.randint(-shift_y, shift_y + 1, size=[x.size(0), 1, 1], device=x.device)
+    if param.Siamese:  # Siamese augmentation:
+        translation_x_clone=translation_x.clone()
+        translation_y_clone=translation_y.clone()
+        translation_x[:] = translation_x_clone[0]
+        translation_y[:] = translation_y_clone[0]
+        # translation_x[:] = translation_x[0]
+        # translation_y[:] = translation_y[0]
+    grid_batch, grid_x, grid_y = torch.meshgrid(
+        torch.arange(x.size(0), dtype=torch.long, device=x.device),
+        torch.arange(x.size(2), dtype=torch.long, device=x.device),
+        torch.arange(x.size(3), dtype=torch.long, device=x.device),
+    )
+    grid_x = torch.clamp(grid_x + translation_x + 1, 0, x.size(2) + 1)
+    grid_y = torch.clamp(grid_y + translation_y + 1, 0, x.size(3) + 1)
+    x_pad = F.pad(x, [1, 1, 1, 1, 0, 0, 0, 0])
+    x = x_pad.permute(0, 2, 3, 1).contiguous()[grid_batch, grid_x, grid_y].permute(0, 3, 1, 2)
+    return x
+
+
+def rand_cutout(x, param):
+    ratio = param.ratio_cutout
+    cutout_size = int(x.size(2) * ratio + 0.5), int(x.size(3) * ratio + 0.5)
+    set_seed_DiffAug(param)
+    offset_x = torch.randint(0, x.size(2) + (1 - cutout_size[0] % 2), size=[x.size(0), 1, 1], device=x.device)
+    set_seed_DiffAug(param)
+    offset_y = torch.randint(0, x.size(3) + (1 - cutout_size[1] % 2), size=[x.size(0), 1, 1], device=x.device)
+    if param.Siamese:  # Siamese augmentation:
+        offset_x_clone=offset_x.clone()
+        offset_y_clone=offset_y.clone()
+        offset_x[:] = offset_x_clone[0]
+        offset_y[:] = offset_y_clone[0]
+        # offset_x[:] = offset_x[0]
+        # offset_y[:] = offset_y[0]
+    grid_batch, grid_x, grid_y = torch.meshgrid(
+        torch.arange(x.size(0), dtype=torch.long, device=x.device),
+        torch.arange(cutout_size[0], dtype=torch.long, device=x.device),
+        torch.arange(cutout_size[1], dtype=torch.long, device=x.device),
+    )
+    grid_x = torch.clamp(grid_x + offset_x - cutout_size[0] // 2, min=0, max=x.size(2) - 1)
+    grid_y = torch.clamp(grid_y + offset_y - cutout_size[1] // 2, min=0, max=x.size(3) - 1)
+    mask = torch.ones(x.size(0), x.size(2), x.size(3), dtype=x.dtype, device=x.device)
+    mask[grid_batch, grid_x, grid_y] = 0
+    x = x * mask.unsqueeze(1)
+    return x
+
+
+AUGMENT_FNS = {
+    'color': [rand_brightness, rand_saturation, rand_contrast],
+    'crop': [rand_crop],
+    'cutout': [rand_cutout],
+    'flip': [rand_flip],
+    'scale': [rand_scale],
+    'rotate': [rand_rotate],
+}

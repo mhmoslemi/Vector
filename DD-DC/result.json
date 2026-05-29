@@ -1,0 +1,66 @@
+{
+  "metric": "clean_test_accuracy_percent",
+  "epoch": 60,
+  "num_eval": 1,
+  "training": {
+    "optimizer": "SGD",
+    "lr": 0.1,
+    "momentum": 0.9,
+    "weight_decay": 5e-4,
+    "scheduler": "CosineAnnealingLR",
+    "epochs": 60,
+    "batch_size": 128
+  },
+  "adversarial_training": {
+    "attack": "PGD",
+    "steps": 7,
+    "alpha": "eps/5",
+    "eps_values_over_255": [2, 4, 6, 8]
+  },
+  "methods": {
+    "DGC": "Gradient-matching unlearnable examples (ours)",
+    "EMN-SW": "EMN sample-wise noise baseline"
+  },
+  "datasets": {
+    "CIFAR-10": {
+      "chance_accuracy_percent": 10.0,
+      "resnet18_regimes": {
+        "columns": ["Normal", "AT_eps=2/255", "AT_eps=4/255", "AT_eps=6/255", "AT_eps=8/255"],
+        "rows": [
+          {"method": "DGC",    "budget": "2/255", "values": [18.23, 29.70, 34.78, 40.10, 50.06]},
+          {"method": "DGC",    "budget": "4/255", "values": [19.11, 30.47, 37.03, 43.90, 51.40]},
+          {"method": "DGC",    "budget": "6/255", "values": [17.97, 29.61, 37.03, 43.44, 50.08]},
+          {"method": "DGC",    "budget": "8/255", "values": [18.69, 27.97, 33.31, 39.89, 47.98]},
+          {"method": "EMN-SW", "budget": "8/255", "values": [17.70, 25.04, 59.63, 76.60, 77.33]}
+        ]
+      },
+      "normal_architectures": {
+        "columns": ["ResNet-18", "ResNet-50", "ViT", "DenseNet-121", "VGG-11"],
+        "rows": [
+          {"method": "DGC",    "budget": "2/255", "values": [18.23, 14.67, 17.37, 16.17, 14.14]},
+          {"method": "DGC",    "budget": "4/255", "values": [19.11, 16.27, 21.51, 18.01, 17.41]},
+          {"method": "DGC",    "budget": "6/255", "values": [17.97, 16.37, 17.84, 15.82, 18.54]},
+          {"method": "DGC",    "budget": "8/255", "values": [18.69, 15.30, 18.48, 18.35, 17.86]},
+          {"method": "EMN-SW", "budget": "8/255", "values": [17.70, 17.32, 19.58, 21.66, 20.95]}
+        ]
+      }
+    },
+    "CIFAR-100": {
+      "chance_accuracy_percent": 1.0,
+      "resnet18_regimes": {
+        "columns": ["Normal", "AT_eps=2/255", "AT_eps=4/255", "AT_eps=6/255", "AT_eps=8/255"],
+        "rows": [
+          {"method": "DGC",    "budget": "8/255", "values": [7.70, 11.22, 15.54, 21.21, 27.53]},
+          {"method": "EMN-SW", "budget": "8/255", "values": [3.08, 11.17, 41.71, 50.35, 47.43]}
+        ]
+      },
+      "normal_architectures": {
+        "columns": ["ResNet-18", "ResNet-50", "ViT", "DenseNet-121", "VGG-11"],
+        "rows": [
+          {"method": "DGC",    "budget": "8/255", "values": [7.70, 8.03, 8.73, 6.32, 7.54]},
+          {"method": "EMN-SW", "budget": "8/255", "values": [3.08, 2.82, 4.05, 3.84, 3.68]}
+        ]
+      }
+    }
+  }
+}

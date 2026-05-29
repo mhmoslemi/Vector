@@ -1,0 +1,150 @@
+{
+    "parameters": {
+        "method": "DC",
+        "dataset": "MNIST",
+        "model": "ConvNet",
+        "ipc": 50,
+        "eval_mode": "S",
+        "num_exp": 1,
+        "num_eval": 3,
+        "epoch_eval_train": 500,
+        "Iteration": 60,
+        "lr_img": 0.1,
+        "lr_net": 0.01,
+        "batch_real": 256,
+        "batch_train": 256,
+        "init": "real",
+        "dsa_strategy": "None",
+        "data_path": "../data",
+        "save_path": "result",
+        "dis_metric": "ours",
+        "inner_loop": 10,
+        "outer_loop": 50,
+        "add_noise": false,
+        "noise_type": "None",
+        "noise_path": "../noise-EMN",
+        "device": "cuda",
+        "dsa": false
+    },
+"evaluations": {
+        "0": {
+            "ConvNet": {
+                "mean": 0.9804,
+                "std": 0.0005,
+                "raw_accs": [0.9802, 0.9800, 0.9811]
+            }
+        },
+        "1": {
+            "ConvNet": {
+                "mean": 0.9820,
+                "std": 0.0005,
+                "raw_accs": [0.9825, 0.9814, 0.9821]
+            }
+        },
+        "2": {
+            "ConvNet": {
+                "mean": 0.9813,
+                "std": 0.0013,
+                "raw_accs": [0.9821, 0.9824, 0.9794]
+            }
+        },
+        "3": {
+            "ConvNet": {
+                "mean": 0.9825,
+                "std": 0.0013,
+                "raw_accs": [0.9841, 0.9825, 0.9810]
+            }
+        },
+        "4": {
+            "ConvNet": {
+                "mean": 0.9834,
+                "std": 0.0015,
+                "raw_accs": [0.9843, 0.9846, 0.9813]
+            }
+        },
+        "5": {
+            "ConvNet": {
+                "mean": 0.9832,
+                "std": 0.0008,
+                "raw_accs": [0.9829, 0.9844, 0.9824]
+            }
+        },
+        "6": {
+            "ConvNet": {
+                "mean": 0.9840,
+                "std": 0.0011,
+                "raw_accs": [0.9855, 0.9836, 0.9830]
+            }
+        },
+        "7": {
+            "ConvNet": {
+                "mean": 0.9839,
+                "std": 0.0002,
+                "raw_accs": [0.9840, 0.9836, 0.9842]
+            }
+        },
+        "8": {
+            "ConvNet": {
+                "mean": 0.9845,
+                "std": 0.0004,
+                "raw_accs": [0.9849, 0.9846, 0.9840]
+            }
+        },
+        "9": {
+            "ConvNet": {
+                "mean": 0.9840,
+                "std": 0.0004,
+                "raw_accs": [0.9835, 0.9845, 0.9841]
+            }
+        },
+        "10": {
+            "ConvNet": {
+                "mean": 0.9848,
+                "std": 0.0010,
+                "raw_accs": [0.9856, 0.9854, 0.9834]
+            }
+        },
+        "15": {
+            "ConvNet": {
+                "mean": 0.9848,
+                "std": 0.0007,
+                "raw_accs": [0.9856, 0.9850, 0.9839]
+            }
+        },
+        "20": {
+            "ConvNet": {
+                "mean": 0.9861,
+                "std": 0.0008,
+                "raw_accs": [0.9851, 0.9860, 0.9871]
+            }
+        },
+        "25": {
+            "ConvNet": {
+                "mean": 0.9862,
+                "std": 0.0005,
+                "raw_accs": [0.9867, 0.9863, 0.9856]
+            }
+        },
+        "30": {
+            "ConvNet": {
+                "mean": 0.9868,
+                "std": 0.0009,
+                "raw_accs": [0.9881, 0.9862, 0.9860]
+            }
+        },
+        "35": {
+            "ConvNet": {
+                "mean": 0.9860,
+                "std": 0.0006,
+                "raw_accs": [0.9860, 0.9868, 0.9853]
+            }
+        },
+        "40": {
+            "ConvNet": {
+                "mean": 0.9863,
+                "std": 0.0008,
+                "raw_accs": [0.9874, 0.9854, 0.9861]
+            }
+        }
+    }
+}

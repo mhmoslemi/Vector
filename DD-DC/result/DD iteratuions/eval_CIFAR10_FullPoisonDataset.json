@@ -1,0 +1,52 @@
+{
+    "parameters": {
+        "dataset": "CIFAR10",
+        "model": "ConvNet",
+        "eval_mode": "S",
+        "num_exp": 1,
+        "num_eval": 1,
+        "epoch_eval_train": 20,
+        "Iteration": 20,
+        "lr_img": 0.8,
+        "lr_net": 0.01,
+        "batch_real": 256,
+        "batch_train": 256,
+        "dsa_strategy": "None",
+        "data_path": "../data",
+        "save_path": "result",
+        "inner_loop": 4,
+        "outer_loop": 20,
+        "dis_metric": "ours",
+        "device": "cuda",
+        "dsa": false
+    },
+    "evaluations": {
+        "5": {
+            "ConvNet": {
+                "mean": 0.7073,
+                "std": 0.0,
+                "raw_accs": [
+                    0.7073
+                ]
+            }
+        },
+        "10": {
+            "ConvNet": {
+                "mean": 0.5824,
+                "std": 0.0,
+                "raw_accs": [
+                    0.5824
+                ]
+            }
+        },
+        "20": {
+            "ConvNet": {
+                "mean": 0.4108,
+                "std": 0.0,
+                "raw_accs": [
+                    0.4108
+                ]
+            }
+        }
+    }
+}

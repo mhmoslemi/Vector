@@ -1,0 +1,32 @@
+{
+    "parameters": {
+        "method": "DC",
+        "dataset": "CIFAR10",
+        "model": "ConvNet",
+        "ipc": 100,
+        "eval_mode": "UE",
+        "num_exp": 1,
+        "num_eval": 3,
+        "epoch_eval_train": 100,
+        "Iteration": 40,
+        "lr_img": 0.1,
+        "lr_net": 0.01,
+        "batch_real": 256,
+        "batch_train": 256,
+        "init": "real",
+        "dsa_strategy": "None",
+        "data_path": "../data",
+        "save_path": "result",
+        "dis_metric": "ours",
+        "inner_loop": 5,
+        "outer_loop": 60,
+        "add_noise": true,
+        "noise_type": "SW",
+        "noise_path": "/home/mmoslem3/scratch/Unlearnable-Examples-DD/noise-EMN",
+        "test_full_noisy": false,
+        "baseline_epochs": 50,
+        "device": "cuda",
+        "dsa": false
+    },
+    "evaluations": {}
+}

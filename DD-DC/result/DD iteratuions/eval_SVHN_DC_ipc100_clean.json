@@ -1,0 +1,42 @@
+{
+    "parameters": {
+        "method": "DC",
+        "dataset": "SVHN",
+        "model": "ConvNet",
+        "ipc": 100,
+        "eval_mode": "UE",
+        "num_exp": 1,
+        "num_eval": 1,
+        "epoch_eval_train": 250,
+        "Iteration": 6,
+        "lr_img": 0.1,
+        "lr_net": 0.01,
+        "batch_real": 256,
+        "batch_train": 256,
+        "init": "real",
+        "dsa_strategy": "None",
+        "data_path": "../data",
+        "save_path": "result",
+        "dis_metric": "ours",
+        "inner_loop": 5,
+        "outer_loop": 60,
+        "add_noise": false,
+        "noise_type": "None",
+        "noise_path": "/home/mmoslem3/scratch/Unlearnable-Examples-DD/noise-EMN",
+        "test_full_noisy": false,
+        "baseline_epochs": 50,
+        "device": "cuda",
+        "dsa": false
+    },
+    "evaluations": {
+        "5": {
+            "DenseNet_SVHN": {
+                "mean": 0.2842655193607867,
+                "std": 0.0,
+                "raw_accs": [
+                    0.2842655193607867
+                ]
+            }
+        }
+    }
+}

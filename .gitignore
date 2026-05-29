@@ -1,0 +1,94 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# ML / large model & data files
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.npy
+*.npz
+*.pb
+*.onnx
+*.tflite
+
+# Datasets / data directories
+data/
+data*/
+datasets/
+**/data/
+**/data*/
+
+# Logs and experiment outputs
+logs/
+runs/
+wandb/
+mlruns/
+experiments/
+test_exp/
+exp_results.json
+plots/
+results/
+outputs/
+_/
+
+# Pretrained / downloaded checkpoints
+pretrained_checkpoints/
+checkpoints/
+
+# Anything with "old" in the name (files or dirs)
+*old*
+
+# Images (generated outputs)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# Nested git repos (ignore subdirectory .git dirs, not the root one)
+*/.git
