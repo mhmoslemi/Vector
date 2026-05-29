@@ -20,7 +20,7 @@ STEP_SIZE="${STEP_SIZE:-0.8}"    # PGD step size (will be divided by 255)
 TRAIN_STEP="${TRAIN_STEP:-10}"   # Inner model-training steps (min-min only)
 
 # classwise defaults differ from samplewise — set per-type below
-if [ "$PERTURB_TYPE" == "classwise" ]; then
+if [ "$PERTURB_TYPE" = "classwise" ]; then
     NUM_STEPS="${NUM_STEPS:-1}"       # classwise uses fewer PGD steps
     STOP_ERROR="${STOP_ERROR:-0.1}"   # classwise stop error (original doc default)
     UNIVERSAL_TRAIN_TARGET="${UNIVERSAL_TRAIN_TARGET:-train_subset}"
@@ -102,9 +102,9 @@ esac
 #   classwise  → one noise vector per class:  [NUM_CLASSES, C, H, W]
 #   samplewise → one noise vector per sample: [TRAIN_SIZE,  C, H, W]
 # =============================================================================
-if [ "$PERTURB_TYPE" == "classwise" ]; then
+if [ "$PERTURB_TYPE" = "classwise" ]; then
     NOISE_SHAPE="${NUM_CLASSES} ${CHANNELS} ${IMG_SIZE} ${IMG_SIZE}"
-elif [ "$PERTURB_TYPE" == "samplewise" ]; then
+elif [ "$PERTURB_TYPE" = "samplewise" ]; then
     # When a subset .pt is provided, the Python side overrides noise_shape[0] automatically.
     # Pass full TRAIN_SIZE here; it will be corrected after subset indices are loaded.
     NOISE_SHAPE="${TRAIN_SIZE} ${CHANNELS} ${IMG_SIZE} ${IMG_SIZE}"
@@ -117,7 +117,7 @@ fi
 # Output directory
 # =============================================================================
 # EXP_DIR="experiments/${DATASET}_${PERTURB_TYPE}_${ATTACK_TYPE}"
-EXP_DIR="/home/mmoslem3/scratch/UE-DD/partial"
+EXP_DIR="/work/mohammad/Vector/UE-EMN"
 mkdir -p "${EXP_DIR}"
 
 # =============================================================================
